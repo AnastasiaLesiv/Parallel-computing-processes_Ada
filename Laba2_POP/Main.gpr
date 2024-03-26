@@ -1,0 +1,13 @@
+project Main is
+
+   for Main use ("thread_min_element.adb");
+
+   for Source_Dirs use (".");
+   for Object_Dir use "obj";
+   for Exec_Dir use ".";
+
+   package Builder is
+      for Executable ("thread_min_element.adb") use "gnatmake";
+   end Builder;
+
+end Main;

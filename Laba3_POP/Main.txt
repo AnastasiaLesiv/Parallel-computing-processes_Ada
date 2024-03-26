@@ -1,0 +1,20 @@
+project Main is
+   for Source_Dirs use (".");
+   for Object_Dir use "obj";
+   for Exec_Dir use "bin";
+
+   for Main use ("producer_consumer.adb");
+
+   package Builder is
+      for Executable ("producer_consumer.adb") use "producer_consumer";
+   end Builder;
+
+   package Naming is
+      for Body_Suffix ("producer_consumer.adb") use ".adb";
+      for Spec_Suffix ("producer_consumer.adb") use ".ads";
+   end Naming;
+
+   package Compiler is
+      for Default_Switches ("ada") use ("-g");
+   end Compiler;
+end Main;
