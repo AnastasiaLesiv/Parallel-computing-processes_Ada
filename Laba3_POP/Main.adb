@@ -1,74 +1,52 @@
+with Ada.Containers.Synchronized_Queue_Interfaces;
+with Ada.Containers.Bounded_Synchronized_Queues;
 with Ada.Text_IO;
-use Ada.Text_IO;
 
-with GNAT.Semaphores;
-use GNAT.Semaphores;
+procedure Producer_Consumer_V1 is
+   type Work_Item is range 1 .. 10;
 
-with Ada.Containers.Indefinite_Doubly_Linked_Lists;
-use Ada.Containers;
+   package Work_Item_Queue_Interfaces is
+     new Ada.Containers.Synchronized_Queue_Interfaces
+           (Element_Type => Work_Item);
 
-procedure Producer_Consumer is
-   package String_Lists is new Indefinite_Doubly_Linked_Lists (String);
-   use String_Lists;
+   package Work_Item_Queues is
+     new Ada.Containers.Bounded_Synchronized_Queues
+           (Queue_Interfaces => Work_Item_Queue_Interfaces,
+            Default_Capacity => 5);
 
-   procedure Starter (Storage_Size : in Integer; Item_Numbers : in Integer) is
-      Storage : List;
-      Storage_Capacity : Integer := 0;
-      pragma Atomic(Storage_Capacity);
+   Queue : Work_Item_Queues.Queue;
 
-      Full_Storage : Counting_Semaphore (Storage_Size, Default_Ceiling);
+   task type Producer;
+   task type Consumer;
 
-      task Producer;
-      task Consumer;
+   Producers : array (1 .. 4)  of Producer;
+   Consumers : array (1 .. 2) of Consumer;
 
-      task body Producer is
-         procedure Producer_Task is
-         begin
-            for i in 1 .. Item_Numbers loop
-               Full_Storage.Seize;
-               while Storage_Capacity = Storage_Size loop
-                  delay 1.0;
-               end loop;
-
-               Storage.Append ("item " & i'Img);
-               Put_Line ("Put item " & i'Img);
-               Storage_Capacity := Storage_Capacity + 1;
-
-               delay 1.5;
-            end loop;
-         end Producer_Task;
-      begin
-         Producer_Task;
-      end Producer;
-
-      task body Consumer is
-         procedure Consumer_Task is
-         begin
-            for i in 1 .. Item_Numbers loop
-               while Storage_Capacity = 0 loop
-                  delay 1.0;
-               end loop;
-
-               declare
-                  Item : String := First_Element (Storage);
-               begin
-                  Put_Line ("Took " & Item);
-                  Storage_Capacity := Storage_Capacity - 1;
-               end;
-
-               Storage.Delete_First;
-               Full_Storage.Release;
-
-               delay 2.0;
-            end loop;
-         end Consumer_Task;
-      begin
-         Consumer_Task;
-      end Consumer;
+   task body Producer is
    begin
-      null;
-   end Starter;
+      for Item in Work_Item loop
+      Queue.Enqueue(Item);
+         --Work_Item_Queues.Enqueue(Queue, New_Item => Item);
+         Ada.Text_IO.Put_Line ("Producer put " & Work_Item'Image (Item));
+      end loop;
+   end Producer;
+
+   task body Consumer is
+      Item : Work_Item;
+   begin
+      loop
+         select
+            Queue.Dequeue(Item); -- Call the Dequeue entry of the Queue object
+            Ada.Text_IO.Put_Line ("Consumer take " & Work_Item'Image (Item));
+         or
+            
+            delay 1.0; -- Delay for 1 second if the queue is empty
+            exit;
+         end select;
+      end loop;
+      Ada.Text_IO.Put_Line ("Consumer stoped ");
+   end Consumer;
 
 begin
-   Starter (3, 10);
-end Producer_Consumer;
+   null;
+end Producer_Consumer_V1;
